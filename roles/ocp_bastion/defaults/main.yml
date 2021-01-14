@@ -1,0 +1,26 @@
+---
+internet_connected: "no"
+removable_media_path: ""
+
+architecture: x86_64
+cluster_name: ""
+domain_name: ""
+install_name: ocp-install-dir
+install_dir: "/home/{{ ansible_env.USER }}/{{ install_name }}"
+local_registry: ""
+local_repository: ocp4/openshift4
+ocp_release: 4.6.6
+product_repo: openshift-release-dev
+pullsecret_email: ""
+release_name: ocp-release
+repo_url: "{{ ansible_default_ipv4.address }}"
+
+## Vcenter Information
+#datacenter: dc01                 # vSphere datacenter where your cluster will live
+#datastore: ds02                  # vSphere datastore for your cluster
+#template_name: RHCOS_template    # the name of the RHCOS template in vSphere that will be used to create the cluster nodes
+#vcenter_ip: 192.168.200.50       # wil more than likely be the ip address of your vcenter_server
+#vcenter_server: myvcenter.com    # server name for vcenter
+#vcenter_passwd: password         # password for your vcenter_user
+#vcenter_user: humbe              # make sure to use an administrator user that can create resources
+#

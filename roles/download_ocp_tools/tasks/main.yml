@@ -1,0 +1,51 @@
+---
+- name: Establish OCP Version
+  set_fact: 
+    ocp_version: "{{ ocp_release[:-2] }}"
+
+- name: Create download dir
+  file:
+    path: /home/{{ ansible_env.USER }}/ocp-tools
+    state: directory
+  register: tools_temp_dir
+
+- name: Download checksums for installation program
+  get_url:
+    url: "{{ repo_url }}/clients/ocp/{{ ocp_release }}/sha256sum.txt"
+    dest: "{{ tools_temp_dir.path }}"
+
+- name: Capture checksums for client program
+  shell: "cat /{{ tools_temp_dir.path }}/sha256sum.txt | grep openshift-client-linux | awk '{ print $1 }'"
+  register: client_sha
+
+- name: Download client program
+  get_url:
+    url: "{{ repo_url }}/clients/ocp/{{ ocp_release }}/openshift-client-linux-{{ ocp_release }}.tar.gz"
+    dest: "{{ tools_temp_dir.path }}"
+    checksum: sha256:{{ client_sha.stdout }}
+
+- name: Capture checksums for installation program
+  shell: "cat {{ tools_temp_dir.path }}/sha256sum.txt | grep openshift-install-linux | awk '{ print $1 }'"
+  register: installation_sha
+
+- name: Download installation program
+  get_url:
+    url: "{{ repo_url }}/clients/ocp/{{ ocp_release }}/openshift-install-linux-{{ ocp_release }}.tar.gz"
+    dest: "{{ tools_temp_dir.path }}"
+    checksum: sha256:{{ installation_sha.stdout }}
+
+- name: Download checksums for OVA
+  get_url:
+    url: "{{ repo_url }}/dependencies/rhcos/{{ ocp_version }}/{{ ocp_release }}/sha256sum.txt"
+    dest: "{{ tools_temp_dir.path }}/sha256sum.txt"
+    force: true
+
+- name: Capture checksums for OVA
+  shell: "cat {{ tools_temp_dir.path }}/sha256sum.txt | grep rhcos-{{ ocp_release }}-{{ architecture }}-vmware.{{ architecture }}.ova | awk '{ print $1 }'"
+  register: ova_sha
+
+- name: Download OVA
+  get_url:
+    url: "{{ repo_url }}/dependencies/rhcos/{{ ocp_version }}/{{ ocp_release }}/rhcos-{{ ocp_release }}-{{ architecture }}-vmware.{{ architecture }}.ova"
+    dest: "{{ tools_temp_dir.path }}"
+    checksum: sha256:{{ ova_sha.stdout }}

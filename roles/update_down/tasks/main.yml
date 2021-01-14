@@ -1,0 +1,31 @@
+---
+- name: Create temp dir
+  tempfile:
+    state: directory
+    suffix: ocp_temp
+  register: temp_dir
+
+- name: Generate pullsecret json
+  include_tasks: pullsecret.yml
+
+- name: Dry run images download
+  command: oc adm release mirror -a {{ temp_dir.path }}/pull-secret.json --to-dir={{ removable_media_path }}/mirror quay.io/{{ product_repo }}/{{ release_name }}:{{ ocp_release }}-{{ architecture }} --dry-run
+  ignore_errors: no
+  register: dry_run
+  when: mirror_pulling
+
+- name: Print dry_run output
+  debug:
+    var: dry_run.stderr_lines
+  when: mirror_pulling
+
+- name: Pause for confirmation
+  pause:
+    prompt: "Review (above) the images and configuration manifests to mirror"
+  when: mirror_pulling
+
+- name: Images download
+  command: oc adm release mirror -a {{ temp_dir.path }}/pull-secret.json --to-dir={{ removable_media_path }}/mirror quay.io/{{ product_repo }}/{{ release_name }}:{{ ocp_release }}-{{ architecture }}
+  ignore_errors: no
+  when: mirror_pulling
+

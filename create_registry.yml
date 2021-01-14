@@ -1,0 +1,106 @@
+---
+#- name: Verify depedencies
+#  hosts: localhost
+#  connection: local
+#  become: true
+#  tasks:
+#    - name: Verify EPEL repository - remote host
+#    - name: Verify bcrypt (python3-bcrypt) - remote host
+#    - name: Check for passlib dep - remote host
+#      yum:
+#        name: python-passlib
+#        state: present
+#      ignore_errors: yes
+#      register: passlib_result
+
+#    - name: Check for passlib3 dep - remote host
+#      yum:
+#        name: python3-passlib
+#        state: present
+#      when: passlib_result is failed
+
+- name: Create a podman container registry
+  hosts: 192.168.122.81
+  become: true
+  vars_files:
+    - vars/main.yml
+    - vars/vault.yml
+  vars:
+    user_owner: humbe
+    country_name: "US"
+    state_or_province_name: "CA"
+    locality_name: "San Diego"
+    organization_name: "Red Hat"
+    organizational_unit_name: "NAPS"
+    email_address: "hojeda@redhat.com"
+    common_name: "rhel82"
+    common_path: /opt/registry
+  tasks:
+    - name: Create registry dir
+      file:
+        path: "{{ common_path }}/{{ item }}"
+        state: directory
+        mode: 0755
+      loop:
+        - auth
+        - certs
+        - data
+
+    - name: Generate OpenSSL private key
+      openssl_privatekey:
+        path: "{{ common_path }}/certs/domain.key"
+        type: RSA
+        size: 4096
+        backup: true
+        owner: "{{ ansible_user_id }}"
+
+    - name: Generate OpenSSL CSR
+      openssl_csr:
+        path: "{{ common_path }}/certs/domain.csr"
+        privatekey_path: "{{ common_path }}/certs/domain.key"
+        country_name: "{{ country_name }}"
+        state_or_province_name: "{{ state_or_province_name }}"
+        locality_name: "{{ locality_name }}"
+        organization_name: "{{ organization_name }}"
+        organizational_unit_name: "{{ organizational_unit_name }}"
+        email_address: "{{ email_address }}"
+        common_name: "{{ common_name }}"
+        state: present
+        backup: true
+        owner: "{{ ansible_user_id }}"
+
+    - name: Generate self-signed cert
+      openssl_certificate:
+        path: "{{ common_path }}/certs/domain.crt"
+        csr_path: "{{ common_path }}/certs/domain.csr"
+        privatekey_path: "{{ common_path }}/certs/domain.key"
+        provider: selfsigned
+        owner: "{{ ansible_user_id }}"
+
+    - name: Create htpasswd username-pass
+      htpasswd:
+        path: "{{ common_path }}/auth/htpasswd"
+        name: "{{ mirror_registry_user }}"
+        password: "{{ mirror_registry_passwd }}"
+        owner: "{{ ansible_user_id }}"
+        mode: 0644
+
+    - name: Change ownership of directories
+      file:
+        path: "{{ common_path }}"
+        owner: "{{ user_owner }}"
+        recurse: true
+
+- name: Run podman container
+  hosts: 192.168.122.81
+  become: false
+  vars:
+    common_path: /opt/registry
+  tasks:
+    - name: Pull registry image
+      podman_image:
+        name: docker.io/library/registry
+        tag: 2
+
+    - name: Run container
+      command: podman run -d --name mirror-registry -p 5000:5000 --restart=always -v {{ common_path }}/data:/var/lib/registry:z -v {{ common_path }}/auth:/auth:z -e "REGISTRY_AUTH=htpasswd" -e "REGISTRY_AUTH_HTPASSWD_REALM=Registry Realm" -e "REGISTRY_AUTH_HTPASSWD_PATH=/auth/htpasswd" -v {{ common_path }}/certs:/certs:z -e REGISTRY_HTTP_TLS_CERTIFICATE=/certs/domain.crt -e REGISTRY_HTTP_TLS_KEY=/certs/domain.key docker.io/library/registry:2

@@ -1,0 +1,33 @@
+---
+- hosts: localhost
+  vars_files:
+    - vars/main.yml
+    - vars/vault.yml
+  tasks:
+    - name: Test username-passwd
+      set_fact:
+        mirror_creds: "{{ mirror_registry_user + ':' + mirror_registry_passwd }}"
+        cacheable: no
+
+    - name: Base64 encode string
+      set_fact:
+        base64_creds: "{{ mirror_creds | b64encode }}"
+        cacheable: no
+
+    - name: Test fact
+      debug:
+        msg: "{{ base64_creds }}"
+
+    - name: Test pullsecret extract
+      set_fact:
+        var: item
+      loop: "{{ pullsecret | community.general.json_query('auths') }}"
+
+    - name: Base64 decoding JSON
+      debug:
+        msg: "{{ imported_json.content|b64decode|from_json }}"
+
+    - name: Adding a key
+      set_fact:
+        imported_json: '{{ imported_json.content|b64decode|from_json | default([]) | combine({ "auths":{mirror_url:{"auth":base64_mirror_creds,"email":pullsecret_email}} }) }}'
+        cacheable: no

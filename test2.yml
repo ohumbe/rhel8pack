@@ -1,0 +1,30 @@
+---
+- hosts: localhost
+  vars_files:
+    - vars/main.yml
+    - vars/vault.yml
+  tasks:
+    - name: Temp dir
+      tempfile:
+        state: directory
+        suffix: ocp_temp
+      register: temp_dir
+
+    - name: Generate user-pass var
+      set_fact:
+        plain_mirror_creds: "{{ mirror_registry_user + ':' + mirror_registry_passwd }}"
+        cacheable: no
+
+    - name: Base64 user-pass var
+      set_fact:
+        base64_mirror_creds: "{{ plain_mirror_creds | b64encode }}"
+        cacheable: no
+
+    - name: Set disconnected pullsecret
+      set_fact:
+        disconnected_pullsecret: "'{\"auths\":{\"{{ local_registry }}\": {\"auth\": \"{{ base64_mirror_creds }}\",\"email\": \"{{ pullsecret_email }}\"}}}'"
+
+    - name: Print secret
+      copy:
+        content: "{{ disconnected_pullsecret }}"
+        dest: "{{ temp_dir.path }}/pullsecret.json"

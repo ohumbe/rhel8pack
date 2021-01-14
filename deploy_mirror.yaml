@@ -1,0 +1,8 @@
+---
+- hosts: 192.168.122.81
+  vars_files:
+    - vars/main.yml
+    - vars/vault.yml
+  roles:
+    - { role: install_ocp_cli, become: yes }
+    - { role: create_mirror }

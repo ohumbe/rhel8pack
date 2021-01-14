@@ -1,0 +1,49 @@
+---
+- name: Create temp dir
+  tempfile:
+    state: directory
+    suffix: ocp_temp
+  register: tools_temp_dir
+
+- name: Download checksums for installation program
+  get_url:
+    url: "{{ repo_url }}/{{ ocp_release }}/sha256sum.txt"
+    dest: "{{ tools_temp_dir.path }}"
+
+- name: Capture checksums for client program
+  shell: "cat /{{ tools_temp_dir.path }}/sha256sum.txt | grep openshift-client-linux | awk '{ print $1 }'"
+  register: client_sha
+
+- name: Download client program
+  get_url:
+    url: "{{ repo_url }}/{{ ocp_release }}/openshift-client-linux-{{ ocp_release }}.tar.gz"
+    dest: "{{ tools_temp_dir.path }}"
+    checksum: sha256:{{ client_sha.stdout }}
+
+- name: Capture checksums for installation program
+  shell: "cat {{ tools_temp_dir.path }}/sha256sum.txt | grep openshift-install-linux | awk '{ print $1 }'"
+  register: installation_sha
+
+- name: Download installation program
+  get_url:
+    url: "{{ repo_url }}/{{ ocp_release }}/openshift-install-linux-{{ ocp_release }}.tar.gz"
+    dest: "{{ tools_temp_dir.path }}"
+    checksum: sha256:{{ installation_sha.stdout }}
+
+- name: Extract programs to installation dir
+  unarchive:
+    src: "{{ item }}"
+    dest: /usr/local/bin
+    mode: 0755
+    remote_src: yes
+  loop:
+    - "{{ tools_temp_dir.path }}/openshift-client-linux-{{ ocp_release }}.tar.gz"
+    - "{{ tools_temp_dir.path }}/openshift-install-linux-{{ ocp_release }}.tar.gz"
+
+- name: Add autocomplete to bash
+  shell: 'oc completion bash | sudo tee /etc/bash_completion.d/openshift > /dev/null'
+
+- name: Remove temp dir
+  file:
+    path: "{{ tools_temp_dir.path }}"
+    state: absent

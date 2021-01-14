@@ -1,0 +1,27 @@
+---
+- hosts: 192.168.122.81
+  become: false
+  vars_files:
+    - vars/main.yml
+    - vars/vault.yml
+  tasks:
+    - name: Capture ssh
+      slurp: 
+        src: "{{ install_dir }}/.ssh/id_rsa.pub"
+      register: id_rsa
+
+    - name: Load var
+      set_fact:
+        ssh_key: "{{ id_rsa.content | b64decode }}"
+
+    - name: load var2
+      set_fact:
+        ssh_key2: "{{ ssh_key[:-1] }}"
+
+    - name: Spit ssh
+      debug:
+        var: ssh_key2
+
+          #    - name: Load var from ssh
+          #      set_fact:
+          #        ssh_key: id_rsa

@@ -1,0 +1,26 @@
+## OCP Related Information
+internet_connected: 'no'          # select yes for internet availability; otherwise choose no
+removable_media_path: /tmp    # specify full path
+
+architecture: x86_64
+cluster_name: mycluster          # if your intended cluster and domain name is mycluster.bsaedomain.com, the cluster_name is 'mycluster'
+domain_name: basedomain.net      # if your intended cluster and domain name is mycluster.bsaedomain.com, the domain name of your cluster is 'basedomain.com'
+install_dir: "/home/{{ ansible_env.USER }}/{{ install_name }}"
+install_name: ocp-cluster        # this will be the name of the installation directory
+local_registry: rhel82:5000    # specify the registry domain name, and optionally the port, that your mirror registry uses to serve content
+local_repository: ocp4/openshift4
+ocp_release: 4.6.6               # Select OCP version in the form of 'X.Y.Z'
+product_repo: openshift-release-dev
+pullsecret_email: hojeda@redhat.com    # specify the email associated with your pull secret
+release_name: ocp-release
+repo_url: https://mirror.openshift.com/pub/openshift-v4    # replace with private repo url if this is a disconnected environment
+utility_server: "{{ ansible_default_ipv4.address }}"  # http server serving ignition configs
+
+## Vcenter Information
+datacenter: dc01                 # vSphere datacenter where your cluster will live
+datastore: ds02                  # vSphere datastore for your cluster
+template_name: RHCOS_template    # the name of the RHCOS template in vSphere that will be used to create the cluster nodes
+vcenter_ip: 192.168.200.50       # wil more than likely be the ip address of your vcenter_server
+vcenter_server: myvcenter.com    # server name for vcenter
+vcenter_passwd: password         # password for your vcenter_user
+vcenter_user: humbe              # make sure to use an administrator user that can create resources

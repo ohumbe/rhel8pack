@@ -1,0 +1,31 @@
+apiVersion: v1
+baseDomain: {{ domain_name }}
+compute:
+- name: worker
+  hyperthreading: Enabled
+  replicas: 0
+controlPlane:
+  hyperthreading: Enabled
+  name: master
+  replicas: 3
+metadata:
+  name: {{ cluster_name }}
+platform:
+  vsphere:
+    vcenter: {{ vcenter_server }}
+    username: {{ vcenter_user }}
+    password: {{ vcenter_passwd }}
+    datacenter: {{ datacenter }}
+    defaultDatastore: {{ datastore }}
+fips: false
+pullSecret: {{ disconnected_pullsecret if internet_connected == "no" else pullsecret }}
+sshKey: '{{ ssh_key[:-1] }}'
+imageContentSources:
+- mirrors:
+  - '{{ local_registry }}/ocp4/openshift4/release'
+  source: quay.io/openshift-release-dev/ocp-release
+- mirrors:
+  - '{{ local_registry }}/ocp4/openshift4/release'
+  source: quay.io/openshift-release-dev/ocp-v4.0-art-dev
+
+# LOCAL_REGISTRY / LOCAL_REPOSITORY 

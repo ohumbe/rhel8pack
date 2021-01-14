@@ -1,0 +1,32 @@
+---
+- name: Create temp dir
+  tempfile:
+    state: directory
+    suffix: ocp_temp
+  register: temp_dir
+
+- name: Generate pullsecret json
+  include_tasks: pullsecret.yml
+
+- name: Connected mirroring
+  command: oc adm -a {{ temp_dir.path }}/pull-secret.json release mirror \
+           --from=quay.io/{{ product_repo }}/{{ release_name }}:{{ ocp_release }}-{{ architecture }} \
+           --to={{ local_registry }}/{{ local_repository }} \
+           --to-release-image={{ local_registry }}/{{ local_repository }}:{{ ocp_release }}-{{ architecture }}
+  when: internet_connected == "yes"
+
+- name: Disconnected mirroring
+  command: oc adm -a {{ temp_dir.path }}/pull-secret.json release mirror \
+           --from=quay.io/{{ product_repo }}/{{ release_name }}:{{ ocp_release }}-{{ architecture }} \
+           --to={{ local_registry }}/{{ local_repository }} \
+           --to-release-image={{ local_registry }}/{{ local_repository }}:{{ ocp_release }}-{{ architecture }} --dry-run
+  when: internet_connected == "no"
+  ignore_errors: no
+
+- name: Mirror to removable media
+  command: oc adm release mirror -a {{ temp_dir.path }}/pull-secret.json \
+           --to-dir={{ removable_media_path }}/mirror \
+           quay.io/{{ product_repo }}/{{ release_name }}:{{ ocp_release }}-{{ architecture }}
+  when: internet_connected == "no"
+  ignore_errors: no
+

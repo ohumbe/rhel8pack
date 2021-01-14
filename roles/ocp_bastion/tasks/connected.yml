@@ -1,0 +1,17 @@
+---
+
+- name: Download checksums for installation program
+  get_url: 
+    url: https://mirror.openshift.com/pub/openshift-v4/clients/ocp/{{ ocp_version }}/sha256sum.txt
+    dest: /tmp
+
+- name: Capture checksums for client program
+  shell: "cat /tmp/sha256sum.txt | grep openshift-client-linux | awk '{ print $1 }'"
+  register: client_sha
+
+- name: Download installation program
+  get_url:
+    url: https://mirror.openshift.com/pub/openshift-v4/clients/ocp/{{ ocp_version }}/openshift-client-linux-{{ ocp_version }}.tar.gz
+    dest: /tmp
+    #checksum: sha256:94dfbbb7eead13c9f07d5acddd2f6aa3ac18a6cd7f505d0325b6bff90ec5d668
+    checksum: sha256:{{ client_sha.stdout }}

@@ -1,0 +1,39 @@
+---
+# tasks file for create_nodes
+- name: Create vSphere nodes
+  vmware_guest:
+    hostname: "{{ vcenter_ip }}"
+    username: "{{ vcenter_user }}"
+    password: "{{ vcenter_passwd }}"
+    datacenter: "{{ datacenter }}"
+    validate_certs: no
+    folder: "/{{ cluster_name }}"
+    name: "{{ item.machine_name }}"
+    state: "{{ vm_power_state }}"
+    template: "{{ template_name }}"
+    hardware:
+      memory_mb: 16384
+      num_cpus: 4
+      memory_reservation_lock: True
+#    networks:
+#    - name: "{{ vcenter_network }}"
+#mac: "{{ item.macaddress }}"
+    wait_for_ip_address: no
+    customvalues:
+      - key: guestinfo.ignition.config.data
+        value: "{{ lookup('file', '{{ item.ign }}') }}"
+      - key: guestinfo.ignition.config.data.encoding
+        value: base64
+      - key: disk.EnableUUID
+        value: "TRUE"
+  loop:
+    - { machine_name: 'pbootstrap', ign: "{{ install_dir }}/append-bootstrap.64" }
+    - { machine_name: 'pmaster0', ign: "{{ install_dir }}/master.64" }
+    - { machine_name: 'pmaster1', ign: "{{ install_dir }}/master.64" }
+    - { machine_name: 'pmaster2', ign: "{{ install_dir }}/master.64" }
+    - { machine_name: 'pworker0', ign: "{{ install_dir }}/worker.64" }
+    - { machine_name: 'pworker1', ign: "{{ install_dir }}/worker.64" }
+    - { machine_name: 'pworker2', ign: "{{ install_dir }}/worker.64" }
+    - { machine_name: 'pinfra0', ign: "{{ install_dir }}/worker.64" }
+    - { machine_name: 'pinfra1', ign: "{{ install_dir }}/worker.64" }
+    - { machine_name: 'pinfra2', ign: "{{ install_dir }}/worker.64" }

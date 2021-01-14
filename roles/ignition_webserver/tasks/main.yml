@@ -1,0 +1,42 @@
+---
+# tasks file for ignition_webserver
+
+- name: Gather the rpm package facts
+  package_facts:
+    manager: auto
+
+- name: Get rpm package facts
+  debug:
+    var: ansible_facts.packages
+ 
+- name: Install Apache if not installed
+  yum:
+    name: httpd
+    state: present
+  when: "'httpd' not in ansible_facts.packages"
+ 
+- name: Gather service facts
+  service_facts:
+
+- name: Get service facts
+  debug:
+    var: ansible_facts.services["httpd.service"]
+
+- name: Enable and start Apache if not enabled/started
+  service:
+    name: httpd
+    state: started
+    enabled: true
+  when: (ansible_facts.services['httpd.service']['status'] != 'enabled') or
+        (ansible_facts.services['httpd.service']['state'] != 'running')
+
+- name: Host ignition configs
+  copy:
+    src: "{{ install_dir }}/{{ item }}"
+    dest: /var/www/html/
+    mode: 644
+  loop:
+    - append-bootstrap.64
+    - bootstrap.ign
+    - master.64
+    - worker.64

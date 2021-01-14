@@ -1,0 +1,13 @@
+---
+# tasks file for upload_mirror_images
+- name: Create temp dir
+  tempfile:
+    state: directory
+    suffix: ocp_temp
+  register: temp_dir
+
+- name: Generate pullsecret json
+  include_tasks: pullsecret.yml
+
+- name: Disconnected uploading of images
+  shell: GODEBUG=x509ignoreCN=0 oc image mirror -a {{ temp_dir.path }}/pull-secret.json --from-dir={{ removable_media_path }}/mirror "file://openshift/release:{{ ocp_release + "*" }}" {{ local_registry }}/{{ local_repository }}

@@ -1,0 +1,123 @@
+---
+
+- name: Create installation directory with backup and ssl
+  file:
+    path: "{{ install_dir }}/{{ item }}"
+    state: directory
+    recurse: yes
+  loop:
+    - bak
+    - ssl
+    - data
+    - mirror
+    - auth
+    - registry
+    - user-data
+    - .ssh
+
+- name: Generate ssh keys for core user
+  openssh_keypair:
+    path: '{{ install_dir }}/.ssh/id_rsa'
+    comment: 'core@{{ domain_name }}'
+    state: present
+    force: no
+
+- name: Start the ssh-agent
+  shell: 'eval "$(ssh-agent -s)" && ssh-add {{ install_dir }}/.ssh/id_rsa'
+
+- name: Capture ssh
+  slurp:
+    src: "{{ install_dir }}/.ssh/id_rsa.pub"
+  register: id_rsa
+
+- name: Load ssh var
+  set_fact:
+    ssh_key: "{{ id_rsa.content | b64decode }}"
+
+- name: Create temp dir
+  tempfile:
+    state: directory
+    suffix: ocp_temp
+  register: temp_dir
+
+- name: Generate user-pass var
+  set_fact:
+    plain_mirror_creds: "{{ mirror_registry_user + ':' + mirror_registry_passwd }}"
+    cacheable: no
+
+- name: Base64 user-pass var
+  set_fact:
+    base64_mirror_creds: "{{ plain_mirror_creds | b64encode }}"
+    cacheable: no
+
+- name: Set disconnected pullsecret
+  set_fact:
+    disconnected_pullsecret: "'{\"auths\":{\"{{ local_registry }}\": {\"auth\": \"{{ base64_mirror_creds }}\",\"email\": \"{{ pullsecret_email }}\"}}}'"
+  when: internet_connected == "no"
+
+- name: Generate pullsecret json
+  include_tasks: pullsecret.yml
+
+- name: Disconnected extract of installation and pin to release
+  shell: GODEBUG=x509ignoreCN=0 oc adm -a {{ temp_dir.path }}/pull-secret.json release extract --command=openshift-install {{ local_registry }}/{{ local_repository }}:{{ ocp_release }}
+  args:
+    chdir: "{{ install_dir }}"
+  when: internet_connected == "no"
+
+- name: Create install-config.yaml
+  template:
+    src: roles/ocp_bastion/templates/installation-config.j2
+    dest: "{{ install_dir }}/install-config.yaml"
+
+- name: Make a copy of install-config.yaml
+  copy:
+    src: "{{ install_dir }}/install-config.yaml"
+    dest: "{{ install_dir }}/bak/install-config.yaml"
+    remote_src: yes
+
+- name: Create Kubernetes manifest files
+  command: '{{ install_dir }}/openshift-install create manifests --dir={{ install_dir }}'
+
+  #- name: Remove machine set manifests
+  #  file:
+    #    path: "{{ install_dir }}/openshift/99_openshift-cluster-api_master-machines-*.yaml
+
+- name: Set masters to unschedulable
+  lineinfile:
+    path: '{{ install_dir }}/manifests/cluster-scheduler-02-config.yml'
+    regexp: "^  mastersSchedulable"
+    line: "  mastersSchedulable: False"
+
+- name: Backup manifests
+  copy:
+    src: '{{ install_dir }}/manifests'
+    dest: '{{ install_dir }}/bak/'
+    remote_src: yes
+
+- name: Create ignition configs
+  command: '{{ install_dir }}/openshift-install create ignition-configs --dir={{ install_dir }}'
+
+- name: Generate append-bootstrap file
+  template:
+    src: roles/ocp_bastion/templates/bootstrap-append.j2
+    dest: "{{ install_dir }}/append-bootstrap.ign"
+    mode: 0644
+
+- name: Backup ignition configs
+  copy:
+    src: '{{ install_dir }}/{{ item }}'
+    dest: '{{ install_dir }}/bak/{{ item }}'
+    remote_src: yes
+  loop:
+    - bootstrap.ign
+    - append-bootstrap.ign
+    - master.ign
+    - worker.ign
+
+- name: Base64 encode ignition config files
+  shell: 'base64 -w0 {{ install_dir }}/{{ item.ignition }} > {{ install_dir }}/{{ item.base64 }}'
+  loop:
+    - { ignition: 'append-bootstrap.ign', base64: 'append-bootstrap.64' }
+    - { ignition: 'master.ign', base64: 'master.64' }
+    - { ignition: 'worker.ign', base64: 'worker.64' }
+
