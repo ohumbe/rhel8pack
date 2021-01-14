@@ -1,0 +1,11 @@
+---
+
+- name: stop registry on utility
+  shell: 'ssh utility44.greydawn.boeinglabnet.net podman kill  mirror-registry'
+
+
+- name: delete bastions cluster config
+  file:
+    state: absent
+    path: '/home/redhatter/irvine44'
+

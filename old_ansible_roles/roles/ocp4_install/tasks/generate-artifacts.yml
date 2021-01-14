@@ -1,0 +1,63 @@
+---
+
+- name: Create manifests
+  shell: '/usr/local/sbin/openshift-install create manifests --dir={{ install_dir }}'
+
+- name: Set masters to unschedulable
+  lineinfile:
+    path: '{{ install_dir }}/manifests/cluster-scheduler-02-config.yml'
+    regexp: "^  mastersSchedulable"
+    line: "  mastersSchedulable: false"
+
+- name: Backup manifests
+  copy:
+    src: '{{ install_dir }}/manifests'
+    dest: '{{ install_dir }}/bak/'
+
+- name: Create ignition-configs
+  shell: openshift-install create ignition-configs --dir={{ install_dir }}
+
+- name: Copy bootstrap.ign to registry node
+  #copy: 
+  #src: bootstrap.ign
+    #dest: {{ utility_node }}
+    #delegate_to: localhost
+  shell: 'scp {{ install_dir }}/bootstrap.ign {{ utility_node }}:'
+
+- name: Change mode of bootstrap.ign
+  shell: 'ssh {{ utility_node }} chmod 644 bootstrap.ign'
+
+- name: Move bootstrap.ign to /var/www/html
+  shell: 'ssh {{ utility_node }} sudo mv bootstrap.ign /var/www/html'
+
+- name: Use restorecon for SELinux labeling
+  shell: 'ssh {{ utility_node }} sudo restorecon /var/www/html/bootstrap.ign'
+
+- name: Generate file to point to bootstrap.ign on Utility node
+  template: 
+    src: bootstrap-append.j2
+    dest: "{{ install_dir }}/append-bootstrap.ign"
+    mode: 0666
+  
+- name: Copy bootstrap-append.ign to registry node
+  shell: 'scp {{ install_dir }}/append-bootstrap.ign {{ utility_node }}:'
+
+- name: Base64 encode ignition config files
+  shell: 'base64 -w0 {{ install_dir }}/{{ item.ignition }} > {{ install_dir }}/{{ item.base64 }}'
+  loop: 
+  - { ignition: 'append-bootstrap.ign', base64: 'append-bootstrap.64' }
+  - { ignition: 'master.ign', base64: 'master.64' }
+  - { ignition: 'worker.ign', base64: 'worker.64' }
+
+- name: Copy ignitions to registry node
+  shell: 'scp {{ install_dir }}/*.64 {{ install_dir }}/bootstrap.ign root@{{ utility_node }}:/var/www/html'
+
+- name: Change mode of bootstrap.ign
+  shell: 'ssh root@{{ utility_node }} chmod 644 /var/www/html/bootstrap.ign /var/www/html/*.64'
+
+  #- name: Move bootstrap.ign to /var/www/html
+  # shell: 'ssh {{ utility_node }} sudo mv bootstrap.ign *.64 /var/www/html'
+
+- name: Use restorecon for SELinux labeling
+  shell: 'ssh {{ utility_node }} sudo restorecon /var/www/html/{bootstrap.ign,*.64}'
+

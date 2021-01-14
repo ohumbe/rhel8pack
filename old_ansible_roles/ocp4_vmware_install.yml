@@ -1,0 +1,5 @@
+---
+
+- import_playbook: configure_bastion-utility.yml
+
+- import_playbook: ocp4_install.yml

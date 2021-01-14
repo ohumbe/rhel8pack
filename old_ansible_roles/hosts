@@ -1,0 +1,13 @@
+[nix]
+utility44.greydawn.boeinglabnet.net
+lb.greydawn.boeinglabnet.net
+
+
+[win]
+10.126.72.51
+
+[win:vars]
+ansible_user='greydawn\\administrator'
+ansible_password='3Mzp3yi2=I002!'
+ansible_connection=winrm
+ansible_winrm_server_cert_validation=ignore

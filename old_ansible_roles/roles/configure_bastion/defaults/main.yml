@@ -1,0 +1,23 @@
+---
+
+LOCAL_REGISTRY: utility44.greydawn.boeinglabnet.net:5000
+LOCAL_REPOSITORY: ocp4/openshift4
+LOCAL_SECRET_JSON: '{{ install_dir }}/merged_pullsecret.json'
+PRODUCT_REPO: openshift-release-dev
+RELEASE_NAME: ocp-release
+OCP_RELEASE: 4.4.14
+
+home_dir: /home/redhatter
+install_dir: '{{ home_dir }}/irvine44'
+ocp_version: 4.4.14
+domain_name: greydawn.boeinglabnet.net
+self_signed_cert: yes
+user: openshift
+user_passwd: redhat
+registry_dir: /opt/registry
+registry_name: utility44.greydawn.boeinglabnet.net
+auth_dir: /opt/registry/auth
+
+merged_secret_path: '{{ install_dir }}/merged_pullsecret.json'
+ocp_pull_secret: '{{ install_dir }}/ocp_pullsecret.json'
+registry_pull_secret: '{{ install_dir }}/pullsecret_config.json'

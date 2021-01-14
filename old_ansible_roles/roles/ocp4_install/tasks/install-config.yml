@@ -1,0 +1,79 @@
+---
+
+- name:  Generate install-config.yml
+  file:
+    path: '{{ install_dir }}/install-config.yaml'
+    state: touch
+
+- name: Add contents to install-config.yml
+  blockinfile:
+    path: '{{ install_dir }}/install-config.yaml'
+    block: |
+      apiVersion: v1
+      baseDomain: {{ domain_name }}
+      compute:
+      - name: worker
+        hyperthreading: Enabled
+        replicas: 0
+      controlPlane:
+        hyperthreading: Enabled
+        name: master
+        replicas: 3
+      metadata:
+        name: {{ cluster_name }}
+      platform:
+        vsphere:
+          vcenter: {{ vcenter_server }}
+          username: {{ vcenter_user }}
+          password: {{ vcenter_passwd }}
+          datacenter: {{ datacenter }}
+          defaultDatastore: {{ datastore }}
+      fips: {{ fips_mode }}
+      pullSecret:
+      sshKey:
+      imageContentSources:
+      - mirrors:
+        - {{ LOCAL_REGISTRY }}/{{ LOCAL_REPOSITORY }}
+        source: quay.io/openshift-release-dev/ocp-release
+      - mirrors:
+        - {{ LOCAL_REGISTRY }}/{{ LOCAL_REPOSITORY }}
+        source: quay.io/openshift-release-dev/ocp-v4.0-art-dev
+      additionalTrustBundle: |
+
+
+- name: Get merged pull secret
+  shell: 'cat {{ install_dir }}/merged_pullsecret.json'
+  register: pull_secret
+
+- name: Add ssh key to install-config.yaml
+  lineinfile:
+    path: '{{ install_dir }}/install-config.yaml'
+    regexp: '^pullSecret:'
+    line: "pullSecret: '{{ pull_secret.stdout }}'"
+
+- name: Get ssh key
+  shell: 'cat {{ pub_key }}'
+  register: ssh_key
+
+- name: Add ssh key to install-config.yaml
+  lineinfile:
+    path: '{{ install_dir }}/install-config.yaml'
+    regexp: '^sshKey:'
+    line: 'sshKey: "{{ ssh_key.stdout }}"'
+
+- name: Get registry certificate to put in install-config.yaml
+  shell: awk '{printf "  %s\n", $0}' < "{{ install_dir }}/ssl/{{ registry_name }}.crt"
+  register: registry_cert
+
+- name: Add registry cert to install-config.yaml
+  lineinfile:
+    path: '{{ install_dir }}/install-config.yaml'
+    regexp: '^additionalTrustBundle: |'
+    insertafter: '^additionalTrustBundle: |'
+    line: "{{ registry_cert.stdout }}"
+
+- name: Backup install-config.yaml
+  copy:
+    src: '{{ install_dir }}/install-config.yaml'
+    dest: '{{ install_dir }}/bak'
+

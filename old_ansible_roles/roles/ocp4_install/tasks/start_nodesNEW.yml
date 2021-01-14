@@ -1,0 +1,109 @@
+- name: Startup (install) Bootstrap Node
+  vmware_guest:
+    hostname: "{{ vcenter_ip }}"
+    username: "{{ vcenter_user }}"
+    password: "{{ vcenter_passwd }}"
+    datacenter: "{{ datacenter }}"
+    validate_certs: no
+    folder: /irvine44
+    name: pbootstrap
+    state: poweredon
+    template: "{{ template_name }}"
+    #    hardware:
+    #      memory_mb: 16384
+    #      num_cpus: 4
+      #      memory_reservation_lock: True
+      #    wait_for_ip_address: no
+      #    customvalues:
+      #      - key: guestinfo.ignition.config.data
+      #        value: "{{ lookup('file', '{{ item.ign }}') }}"
+      #      - key: guestinfo.ignition.config.data.encoding
+      #        value: base64
+      #      - key: disk.EnableUUID
+      #        value: "TRUE"
+
+- name: Wait 30 Minutes for SSH on Bootstrap Node
+  wait_for:
+    host: "10.126.72.110"
+    port: 22
+    sleep: 10
+    timeout: 1800
+
+- name: Startup (install) Master Nodes
+  vmware_guest:
+    hostname: "{{ vcenter_ip }}"
+    username: "{{ vcenter_user }}"
+    password: "{{ vcenter_passwd }}"
+    datacenter: "{{ datacenter }}"
+    validate_certs: no
+    folder: /irvine44
+    name: "{{ item }}"
+    state: poweredon
+    template: "{{ template_name }}"
+    #    hardware:
+    #      memory_mb: 16384
+    #      num_cpus: 4
+    #      memory_reservation_lock: True
+    #    wait_for_ip_address: no
+    #    customvalues:
+    #      - key: guestinfo.ignition.config.data
+    #        value: "{{ lookup('file', '{{ item.ign }}') }}"
+    #      - key: guestinfo.ignition.config.data.encoding
+    #        value: base64
+    #      - key: disk.EnableUUID
+    #        value: "TRUE"
+  with_items:
+    - "pmaster0"
+    - "pmaster1"
+    - "pmaster2"
+
+- name: Wait 30 Minutes for SSH on Master Nodes
+  wait_for:
+    host: "{{ item }}"
+    port: 22
+    sleep: 10
+    timeout: 1800
+  with_items:
+    - "10.126.72.104"
+    - "10.126.72.105"
+    - "10.126.72.106"
+
+- name: Startup (install) Worker Nodes
+  vmware_guest:
+    hostname: "{{ vcenter_ip }}"
+    username: "{{ vcenter_user }}"
+    password: "{{ vcenter_passwd }}"
+    datacenter: "{{ datacenter }}"
+    validate_certs: no
+    folder: /irvine44
+    name: "{{ item }}"
+    state: poweredon
+    template: "{{ template_name }}"
+    #    hardware:
+    #      memory_mb: 16384
+    #      num_cpus: 4
+    #      memory_reservation_lock: True
+    #    wait_for_ip_address: no
+    #    customvalues:
+    #      - key: guestinfo.ignition.config.data
+    #        value: "{{ lookup('file', '{{ item.ign }}') }}"
+    #      - key: guestinfo.ignition.config.data.encoding
+    #        value: base64
+    #      - key: disk.EnableUUID
+    #        value: "TRUE"
+  with_items:
+     - "pworker0"
+     - "pworker1"
+     - "pworker2"
+
+- name: Wait 30 Minutes for SSH on Master Nodes
+  wait_for:
+    host: "{{ item }}"
+    port: 22
+    sleep: 10
+    timeout: 1800
+  with_items:
+    - "10.126.72.107"
+    - "10.126.72.108"
+    - "10.126.72.109"
+

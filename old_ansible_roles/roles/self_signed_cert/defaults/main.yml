@@ -1,0 +1,11 @@
+---
+
+registry_dir: /opt/registry
+cert_dir: /opt/registry/certs
+registry_name: utility44.greydawn.boeinglabnet.net
+state_name: California
+city: Seal Beach
+organization_name: Boeing
+organizational_unit: Irvine
+email_address: mradecker@redhat.com
+

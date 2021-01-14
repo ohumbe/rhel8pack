@@ -1,0 +1,10 @@
+---
+- name: set up utility/registry server
+  hosts: utility44.greydawn.boeinglabnet.net
+  roles:
+  - configure_utility
+
+- name: set up bastion
+  hosts: localhost
+  roles:
+  - configure_bastion

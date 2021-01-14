@@ -1,0 +1,9 @@
+---
+
+- import_tasks: install-config.yml
+
+- import_tasks: generate-artifacts.yml
+
+- import_tasks: create_nodes.yml
+
+#- import_tasks: start_nodesNEW.yml

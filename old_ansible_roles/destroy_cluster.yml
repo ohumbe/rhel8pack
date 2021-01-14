@@ -1,0 +1,6 @@
+---
+
+- hosts: localhost
+  roles:
+    - delete_nodes
+
